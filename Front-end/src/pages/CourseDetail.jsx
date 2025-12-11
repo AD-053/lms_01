@@ -1,0 +1,283 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
+import { useAuth } from '../context/AuthContext';
+import { courseAPI } from '../services/api';
+import toast from 'react-hot-toast';
+import {
+  FaBook,
+  FaClock,
+  FaUsers,
+  FaMoneyBillWave,
+  FaStar,
+  FaCheckCircle,
+  FaLock,
+} from 'react-icons/fa';
+
+const CourseDetail = () => {
+  const { id } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [enrolling, setEnrolling] = useState(false);
+  const [secretKey, setSecretKey] = useState('');
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
+
+  const ADMIN_ID = '6931e0c79e0db4bfdba05543'; // From constant.js
+
+  useEffect(() => {
+    fetchCourse();
+  }, [id]);
+
+  const fetchCourse = async () => {
+    try {
+      // Mock course data since there's no get single course endpoint
+      const mockCourse = {
+        _id: id,
+        title: 'Web Development Bootcamp',
+        description: 'Learn HTML, CSS, JavaScript, React, Node.js and MongoDB. This comprehensive course will take you from beginner to advanced web developer.',
+        price: 5000,
+        courseImage: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800',
+        status: 'available',
+        isActive: true,
+        totalEnrolled: 245,
+        owner: 'instructor_id',
+      };
+      
+      setCourse(mockCourse);
+      setLoading(false);
+    } catch (error) {
+      toast.error('Failed to load course');
+      setLoading(false);
+    }
+  };
+
+  const handleEnroll = async () => {
+    if (!user?.accountNumber) {
+      toast.error('Please set up your bank account first');
+      navigate('/bank-setup');
+      return;
+    }
+
+    if (user?.balance < course.price) {
+      toast.error('Insufficient balance. Please add funds to your account.');
+      navigate('/bank-setup');
+      return;
+    }
+
+    setShowEnrollModal(true);
+  };
+
+  const confirmEnroll = async (e) => {
+    e.preventDefault();
+    setEnrolling(true);
+
+    try {
+      await courseAPI.enrollCourse({
+        courseID: course._id,
+        price: course.price,
+        adminID: ADMIN_ID,
+        secretKey: secretKey,
+      });
+
+      toast.success('Enrollment request submitted! Waiting for admin approval.');
+      setShowEnrollModal(false);
+      setSecretKey('');
+      
+      // Navigate to my courses after a delay
+      setTimeout(() => {
+        navigate('/my-courses');
+      }, 2000);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Enrollment failed');
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary-500"></div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!course) {
+    return (
+      <Layout>
+        <div className="text-center py-16">
+          <p className="text-gray-500 text-xl">Course not found</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <div className="max-w-6xl mx-auto">
+        {/* Course Header */}
+        <div className="card mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Image */}
+            <div className="relative h-80 rounded-lg overflow-hidden">
+              <img
+                src={course.courseImage}
+                alt={course.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Info */}
+            <div className="space-y-4">
+              <h1 className="text-4xl font-bold text-gray-900">{course.title}</h1>
+              
+              <p className="text-gray-600 text-lg">{course.description}</p>
+
+              {/* Stats */}
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center text-gray-600">
+                  <FaUsers className="mr-2 text-primary-500" />
+                  <span>{course.totalEnrolled} students enrolled</span>
+                </div>
+                <div className="flex items-center text-gray-600">
+                  <FaStar className="mr-2 text-yellow-400" />
+                  <span>5.0 rating</span>
+                </div>
+                <div className="flex items-center text-gray-600">
+                  <FaClock className="mr-2 text-primary-500" />
+                  <span>Self-paced</span>
+                </div>
+              </div>
+
+              {/* Price */}
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-4xl font-bold text-primary-600 flex items-center">
+                    <FaMoneyBillWave className="mr-3" />
+                    ৳{course.price}
+                  </div>
+                  <span
+                    className={`px-4 py-2 rounded-full font-semibold ${
+                      course.status === 'available'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}
+                  >
+                    {course.status === 'available' ? 'Available' : 'Pending'}
+                  </span>
+                </div>
+
+                {user?.Role === 'learner' && course.status === 'available' && (
+                  <button onClick={handleEnroll} className="w-full btn-primary">
+                    <FaCheckCircle className="inline mr-2" />
+                    Enroll Now
+                  </button>
+                )}
+
+                {user?.Role !== 'learner' && (
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <p className="text-blue-700 text-sm">
+                      <FaLock className="inline mr-2" />
+                      Only learners can enroll in courses
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Course Content Overview */}
+        <div className="card">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            What you'll learn
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              'Build real-world projects',
+              'Master modern technologies',
+              'Get certificate upon completion',
+              'Learn at your own pace',
+              'Access to course materials',
+              'Video tutorials and exercises',
+            ].map((item, index) => (
+              <div key={index} className="flex items-start space-x-3">
+                <FaCheckCircle className="text-green-500 mt-1 flex-shrink-0" />
+                <span className="text-gray-700">{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Enrollment Modal */}
+      {showEnrollModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Confirm Enrollment
+            </h2>
+            
+            <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Course:</span>
+                <span className="font-semibold">{course.title}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-600">Price:</span>
+                <span className="font-semibold">৳{course.price}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Your Balance:</span>
+                <span className="font-semibold">৳{user?.balance}</span>
+              </div>
+            </div>
+
+            <form onSubmit={confirmEnroll} className="space-y-5">
+              <div>
+                <label className="label">
+                  <FaLock className="inline mr-2" />
+                  Enter Secret Key to Confirm
+                </label>
+                <input
+                  type="password"
+                  value={secretKey}
+                  onChange={(e) => setSecretKey(e.target.value)}
+                  className="input-field"
+                  placeholder="Your bank secret key"
+                  required
+                />
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  type="submit"
+                  disabled={enrolling}
+                  className="flex-1 btn-primary disabled:opacity-50"
+                >
+                  {enrolling ? 'Processing...' : 'Confirm & Pay'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEnrollModal(false);
+                    setSecretKey('');
+                  }}
+                  className="flex-1 btn-outline"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </Layout>
+  );
+};
+
+export default CourseDetail;
