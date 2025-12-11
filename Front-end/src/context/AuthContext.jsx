@@ -37,7 +37,11 @@ export const AuthProvider = ({ children }) => {
       
       setUser(LogInUser);
       toast.success('Login successful!');
-      return { success: true, user: LogInUser };
+      
+      // Check if user needs to set up bank account
+      const needsBankSetup = !LogInUser.accountNumber;
+      
+      return { success: true, user: LogInUser, needsBankSetup };
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
       toast.error(message);

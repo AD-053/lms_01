@@ -87,19 +87,24 @@ export const courseAPI = {
   getAvailableCourses: () => api.get('/course/availableCourses'),
   getPendingCourses: () => api.get('/course/pendingCourses'),
   getEnrolledCourses: () => api.get('/course/enrolledCourses'),
+  getInstructorCourses: () => api.get('/course/instructorCourses'),
+  getInstructorPendingEnrollments: () => api.get('/course/instructorPendingEnrollments'),
   getCourseById: (id) => api.get(`/course/${id}`),
   enrollCourse: (data) => api.post('/course/courseEnroll', data),
+  rateCourse: (data) => api.post('/course/rateCourse', data),
+  getCourseRating: (courseID) => api.get(`/course/rating/${courseID}`),
 };
 
 // Material APIs
 export const materialAPI = {
-  addMaterial: (formData) => api.post('/course/contentUpload', formData, {
+  uploadMaterial: (formData) => api.post('/course/contentUpload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
-  getAllMaterials: (courseID) => api.post('/course/getAllmaterialList', { courseID }),
-  updateMaterial: (formData) => api.post('/course/updateMaterial', formData, {
+  getMaterialsByCourse: (courseID) => api.post('/course/getAllmaterialList', { courseID }),
+  updateMaterial: (materialId, formData) => api.patch(`/course/material/${materialId}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  deleteMaterial: (materialId) => api.delete(`/course/material/${materialId}`),
 };
 
 // Admin APIs

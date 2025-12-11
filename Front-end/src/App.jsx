@@ -14,9 +14,12 @@ import Dashboard from './pages/Dashboard';
 import BankSetup from './pages/BankSetup';
 import Courses from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
+import CourseLearning from './pages/CourseLearning';
 
 // Instructor Pages
 import AddCourse from './pages/instructor/AddCourse';
+import ManageCourses from './pages/instructor/ManageCourses';
+import CourseMaterials from './pages/instructor/CourseMaterials';
 
 // Admin Pages
 import ApproveEnrollments from './pages/admin/ApproveEnrollments';
@@ -89,6 +92,15 @@ function App() {
       />
 
       <Route
+        path="/course/:id/learn"
+        element={
+          <ProtectedRoute allowedRoles={['learner']}>
+            <CourseLearning />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/my-courses"
         element={
           <ProtectedRoute>
@@ -129,7 +141,16 @@ function App() {
         path="/instructor/my-courses"
         element={
           <ProtectedRoute allowedRoles={['instructor', 'admin']}>
-            <MyCourses />
+            <ManageCourses />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/instructor/course/:courseId/materials"
+        element={
+          <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+            <CourseMaterials />
           </ProtectedRoute>
         }
       />

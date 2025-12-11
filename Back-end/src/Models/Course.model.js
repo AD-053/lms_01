@@ -48,6 +48,18 @@ const CourseSchema=new mongoose.Schema({
      totalEnrolled:{
       type:Number,
       default:0
+     },
+     
+     averageRating:{
+      type:Number,
+      default:5,
+      min:0,
+      max:5
+     },
+     
+     totalRatings:{
+      type:Number,
+      default:0
      }
 
     

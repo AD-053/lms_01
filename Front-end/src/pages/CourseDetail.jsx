@@ -24,6 +24,10 @@ const CourseDetail = () => {
   const [enrolling, setEnrolling] = useState(false);
   const [secretKey, setSecretKey] = useState('');
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [userRating, setUserRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [review, setReview] = useState('');
 
   const ADMIN_ID = '693a58d93cb728332626f9a2'; // From constant.js in backend
 
@@ -38,6 +42,20 @@ const CourseDetail = () => {
       
       setCourse(data.course);
       setEnrollmentStatus(data.enrollmentStatus);
+      
+      // Fetch user's rating if enrolled
+      if (data.enrollmentStatus?.paymentStatus === 'paid' && user?.Role === 'learner') {
+        try {
+          const ratingRes = await courseAPI.getCourseRating(id);
+          if (ratingRes.data.data) {
+            setUserRating(ratingRes.data.data.rating);
+            setReview(ratingRes.data.data.review || '');
+          }
+        } catch (err) {
+          // No rating yet, that's fine
+        }
+      }
+      
       setLoading(false);
     } catch (error) {
       console.error('Error fetching course:', error);
@@ -89,6 +107,26 @@ const CourseDetail = () => {
     }
   };
 
+  const handleRatingSubmit = async () => {
+    if (userRating === 0) {
+      toast.error('Please select a rating');
+      return;
+    }
+
+    try {
+      await courseAPI.rateCourse({
+        courseID: id,
+        rating: userRating,
+        review: review
+      });
+      toast.success('Rating submitted successfully!');
+      setShowRatingModal(false);
+      fetchCourse(); // Refresh to get updated average rating
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit rating');
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -137,8 +175,21 @@ const CourseDetail = () => {
                   <span>{course.totalEnrolled || 0} students enrolled</span>
                 </div>
                 <div className="flex items-center text-gray-600">
-                  <FaStar className="mr-2 text-yellow-400" />
-                  <span>5.0 rating</span>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <FaStar
+                      key={star}
+                      className={`${
+                        star <= Math.round(course.averageRating || 5)
+                          ? 'text-yellow-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
+                  <span className="ml-2">
+                    {(course.averageRating || 5).toFixed(1)} 
+                    {course.totalRatings === 0 && ' (Default)'}
+                    {course.totalRatings > 0 && ` (${course.totalRatings} rating${course.totalRatings > 1 ? 's' : ''})`}
+                  </span>
                 </div>
                 <div className="flex items-center text-gray-600">
                   <FaClock className="mr-2 text-primary-500" />
@@ -203,6 +254,13 @@ const CourseDetail = () => {
                             >
                               <FaBook className="inline mr-2" />
                               Continue Learning
+                            </button>
+                            <button 
+                              onClick={() => setShowRatingModal(true)}
+                              className="mt-2 w-full btn-secondary border-2 border-primary-500 text-primary-600 hover:bg-primary-50"
+                            >
+                              <FaStar className="inline mr-2" />
+                              Rate this Course
                             </button>
                           </div>
                         )}
@@ -332,6 +390,78 @@ const CourseDetail = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Rating Modal */}
+      {showRatingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Rate this Course
+            </h2>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Your Rating
+              </label>
+              <div className="flex justify-center gap-2 mb-6">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <FaStar
+                    key={star}
+                    className={`text-4xl cursor-pointer transition-colors ${
+                      star <= (hoverRating || userRating)
+                        ? 'text-yellow-400'
+                        : 'text-gray-300'
+                    }`}
+                    onClick={() => setUserRating(star)}
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                  />
+                ))}
+              </div>
+              <p className="text-center text-gray-600 font-semibold">
+                {userRating === 0 && 'Select a rating'}
+                {userRating === 1 && 'Poor'}
+                {userRating === 2 && 'Fair'}
+                {userRating === 3 && 'Good'}
+                {userRating === 4 && 'Very Good'}
+                {userRating === 5 && 'Excellent'}
+              </p>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Review (Optional)
+              </label>
+              <textarea
+                value={review}
+                onChange={(e) => setReview(e.target.value)}
+                className="input-field min-h-[120px] resize-none"
+                placeholder="Share your experience with this course..."
+              />
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleRatingSubmit}
+                disabled={userRating === 0}
+                className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Submit Rating
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRatingModal(false);
+                  setHoverRating(0);
+                }}
+                className="flex-1 btn-outline"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

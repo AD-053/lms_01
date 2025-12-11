@@ -20,7 +20,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   const isActive = (path) => location.pathname === path;
 
   const learnerLinks = [
-    { path: '/dashboard', icon: FaHome, label: 'Dashboard' },
+    { path: '/', icon: FaHome, label: 'Home' },
+    { path: '/dashboard', icon: FaChartLine, label: 'Dashboard' },
     { path: '/courses', icon: FaBook, label: 'Browse Courses' },
     { path: '/my-courses', icon: FaUserGraduate, label: 'My Courses' },
     { path: '/bank-setup', icon: FaWallet, label: 'Bank Setup' },
@@ -28,16 +29,18 @@ const Sidebar = ({ isOpen, onClose }) => {
   ];
 
   const instructorLinks = [
-    { path: '/dashboard', icon: FaHome, label: 'Dashboard' },
+    { path: '/', icon: FaHome, label: 'Home' },
+    { path: '/dashboard', icon: FaChartLine, label: 'Dashboard' },
     { path: '/courses', icon: FaBook, label: 'Browse Courses' },
     { path: '/my-courses', icon: FaUserGraduate, label: 'My Courses' },
     { path: '/instructor/add-course', icon: FaPlus, label: 'Add Course' },
-    { path: '/instructor/my-courses', icon: FaChartLine, label: 'Manage Courses' },
+    { path: '/instructor/my-courses', icon: FaCog, label: 'Manage Courses' },
     { path: '/bank-setup', icon: FaWallet, label: 'Bank Setup' },
   ];
 
   const adminLinks = [
-    { path: '/dashboard', icon: FaHome, label: 'Dashboard' },
+    { path: '/', icon: FaHome, label: 'Home' },
+    { path: '/dashboard', icon: FaChartLine, label: 'Dashboard' },
     { path: '/admin/courses', icon: FaBook, label: 'All Courses' },
     { path: '/admin/approve-courses', icon: FaCheckCircle, label: 'Approve Courses' },
     { path: '/admin/approve-enrollments', icon: FaUsers, label: 'Approve Enrollments' },

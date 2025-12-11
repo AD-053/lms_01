@@ -42,8 +42,19 @@ const CourseCard = ({ course }) => {
                 {course.totalEnrolled || 0}
               </span>
               <span className="flex items-center">
-                <FaStar className="mr-1 text-yellow-400" />
-                5.0
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <FaStar
+                    key={star}
+                    className={`text-xs ${
+                      star <= Math.round(course.averageRating || 5)
+                        ? 'text-yellow-400'
+                        : 'text-gray-300'
+                    }`}
+                  />
+                ))}
+                <span className="ml-1">
+                  {(course.averageRating || 5).toFixed(1)}
+                </span>
               </span>
             </div>
           </div>

@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import { FaGraduationCap, FaBook, FaCertificate, FaUsers, FaArrowRight } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
 
 const Home = () => {
+  const { user } = useAuth();
+  
   return (
     <div className="min-h-screen">
       {/* Navbar */}
@@ -15,18 +18,29 @@ const Home = () => {
               </span>
             </Link>
             <div className="flex items-center space-x-4">
-              <Link
-                to="/login"
-                className="text-gray-700 hover:text-primary-600 font-semibold transition"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-2 rounded-lg transition"
-              >
-                Get Started
-              </Link>
+              {user ? (
+                <Link
+                  to="/dashboard"
+                  className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-2 rounded-lg transition"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className="text-gray-700 hover:text-primary-600 font-semibold transition"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-2 rounded-lg transition"
+                  >
+                    Get Started
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

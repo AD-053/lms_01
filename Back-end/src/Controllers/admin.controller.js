@@ -18,11 +18,8 @@ const approvedEnroll=AsynHandler(async(req,res)=>{
         throw new ApiError(401,"courseID , LearnerID and transactionID are needed");
     }
 
-    const admin=await User.findById(req.user?._id);
-    if(!admin || admin?.Role!=="admin"){
-        throw new ApiError(401,"only admin can approve this enrollment");
-    }
-
+    const currentUser=await User.findById(req.user?._id);
+    
     const course=await Course.findById(courseID)
     const learner= await User.findById(learnerID)
     if(!course){
@@ -30,6 +27,14 @@ const approvedEnroll=AsynHandler(async(req,res)=>{
     }
     if(!learner){
         throw new ApiError(401,"learner are not found ")
+    }
+
+    // Check if user is the course owner (instructor) or admin
+    const isOwner = course.owner.toString() === currentUser._id.toString();
+    const isAdmin = currentUser.Role === "admin";
+    
+    if (!isOwner && !isAdmin) {
+        throw new ApiError(403, "Only the course instructor or admin can approve enrollments");
     }
 
     const txn=await Bank.findById(transactionID);
@@ -50,6 +55,13 @@ const approvedEnroll=AsynHandler(async(req,res)=>{
     if(!enroll){
         throw new ApiError(401,"enroll ID not found ")
     }
+    
+    // Get admin user for payment processing
+    const admin = await User.findOne({ Role: "admin" });
+    if (!admin) {
+        throw new ApiError(500, "Admin user not found");
+    }
+    
     //aproved
     txn.status="success";
     admin.balance=Number(admin.balance)+Number(txn.amount);
@@ -131,17 +143,20 @@ const approvedCourse=AsynHandler(async(req,res)=>{
      if(teacher._id.toString()!=admin._id.toString()){
         
      teacher.balance=Number(teacher.balance)+Number(courseLanchPayment);
-     admin.balance=Number(admin.balance)-Number(courseLanchPayment)
      const bank=new transaction(admin._id,teacher?._id,courseLanchPayment,`salary for courseLanch ${course.title}`);
      const txn=await bank.tnx();
     
      bankCheck=await Bank.findById(txn);
      bankCheck.status="success";
-     await admin.save({validateBeforeSave:false});
      await teacher.save({validateBeforeSave:false});
      await bankCheck.save({validateBeforeSave:false});
 
      }
+     
+     // Deduct admin balance regardless of who owns the course
+     admin.balance=Number(admin.balance)-Number(courseLanchPayment);
+     await admin.save({validateBeforeSave:false});
+     
     //course update
    
      course.isActive=true;

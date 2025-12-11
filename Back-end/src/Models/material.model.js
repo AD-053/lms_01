@@ -17,7 +17,7 @@ const materialSchema=new mongoose.Schema({
   
   materialType:{
      type:String,
-     enum:['text','audio','mcq','video','picture'],
+     enum:['text','audio','mcq','video','image'],
      required:true  
   },
  
@@ -52,6 +52,11 @@ const materialSchema=new mongoose.Schema({
         answer: { type: String }
       }
     ],
+  
+  mcqDuration: {  // Duration in minutes for MCQ exams
+    type: Number,
+    default: 5
+  },
 
 uploadedBy:{
    type:mongoose.Schema.Types.ObjectId,

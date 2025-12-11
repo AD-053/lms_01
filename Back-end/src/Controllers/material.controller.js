@@ -11,7 +11,9 @@ import { Enroll } from "../Models/enroll.model.js";
 import { adminID } from "../constant.js";
 
 const addMaterial=AsynHandler(async(req,res)=>{
-      const {title,description,courseID,materialType,text,mcq} =req.body;
+      const {title,description,courseID,materialType,text,mcq,mcqDuration} =req.body;
+      
+      console.log(materialType);
       
       if( !courseID || !materialType){
         throw new ApiError(401,"all Feilds are required! ");
@@ -104,6 +106,7 @@ const addMaterial=AsynHandler(async(req,res)=>{
      video:videoLocalPath,
      audio:audioLocalPath,
      questions,
+     mcqDuration: mcqDuration || questions.length || 5,
      uploadedBy:req.user?._id
      
    })
@@ -132,7 +135,8 @@ const addMaterial=AsynHandler(async(req,res)=>{
 })
 
 const updateMaterial = AsynHandler(async (req, res) => {
-  const { materialID, title, description, text, mcq } = req.body;
+  const { materialId } = req.params;
+  const { title, description, text, mcq, mcqDuration } = req.body;
   const user = await User.findById(req.user?._id);
 
   if (!user) throw new ApiError(401, "User not valid");
@@ -140,7 +144,7 @@ const updateMaterial = AsynHandler(async (req, res) => {
     throw new ApiError(403, "Only admin or instructor can update material");
   }
 
-  const material = await Material.findById(materialID);
+  const material = await Material.findById(materialId);
   if (!material) throw new ApiError(404, "Material not found");
 
  
@@ -152,6 +156,7 @@ const updateMaterial = AsynHandler(async (req, res) => {
   if (title) material.title = title;
   if (description) material.description = description;
   if (text) material.text = text;
+  if (mcqDuration) material.mcqDuration = parseInt(mcqDuration);
 
   if (mcq) {
     try {
@@ -244,9 +249,12 @@ const getAllmaterialList=AsynHandler(async(req,res)=>{
          }
      }
      
+     console.log(user._id);
+     console.log(course.owner);
+     
      if(course.owner.toString()!==adminID){
      if(user.Role==='instructor'){
-        if(user._id !== course.owner){
+        if(user._id.toString() !== course.owner.toString()){
           throw new ApiError(401,"can not access material different instructor")
         }
      }
@@ -262,8 +270,59 @@ const getAllmaterialList=AsynHandler(async(req,res)=>{
     )
 
 })
+
+const deleteMaterial = AsynHandler(async (req, res) => {
+  const { materialId } = req.params;
+
+  const material = await Material.findById(materialId);
+  if (!material) {
+    throw new ApiError(404, "Material not found");
+  }
+
+  const user = await User.findById(req.user?._id);
+  if (!user) {
+    throw new ApiError(401, "User not authenticated");
+  }
+
+  const course = await Course.findById(material.courseID);
+  if (!course) {
+    throw new ApiError(404, "Course not found");
+  }
+
+  // Check if user is admin or the course owner
+  if (user.Role !== "admin" && course.owner.toString() !== user._id.toString()) {
+    throw new ApiError(403, "You are not authorized to delete this material");
+  }
+
+  // Delete files from Cloudinary
+  if (material.picture?.length > 0) {
+    for (const pic of material.picture) {
+      await FileDelete(pic.publicId, "image");
+    }
+  }
+
+  if (material.video?.length > 0) {
+    for (const vid of material.video) {
+      await FileDelete(vid.publicId, "video");
+    }
+  }
+
+  if (material.audio?.length > 0) {
+    for (const aud of material.audio) {
+      await FileDelete(aud.publicId, "video");
+    }
+  }
+
+  await Material.findByIdAndDelete(materialId);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Material deleted successfully"));
+});
+
 export{
     addMaterial,
     getAllmaterialList,
-    updateMaterial
+    updateMaterial,
+    deleteMaterial
 }

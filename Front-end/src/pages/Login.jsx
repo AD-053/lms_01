@@ -30,7 +30,12 @@ const Login = () => {
     setLoading(false);
 
     if (result.success) {
-      navigate(from, { replace: true });
+      // Redirect to bank setup if user hasn't set up their account
+      if (result.needsBankSetup) {
+        navigate('/bank-setup', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     }
   };
 
