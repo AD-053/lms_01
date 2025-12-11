@@ -19,12 +19,13 @@ const CourseDetail = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
+  const [enrollmentStatus, setEnrollmentStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [secretKey, setSecretKey] = useState('');
   const [showEnrollModal, setShowEnrollModal] = useState(false);
 
-  const ADMIN_ID = '6931e0c79e0db4bfdba05543'; // From constant.js
+  const ADMIN_ID = '693a58d93cb728332626f9a2'; // From constant.js in backend
 
   useEffect(() => {
     fetchCourse();
@@ -32,23 +33,15 @@ const CourseDetail = () => {
 
   const fetchCourse = async () => {
     try {
-      // Mock course data since there's no get single course endpoint
-      const mockCourse = {
-        _id: id,
-        title: 'Web Development Bootcamp',
-        description: 'Learn HTML, CSS, JavaScript, React, Node.js and MongoDB. This comprehensive course will take you from beginner to advanced web developer.',
-        price: 5000,
-        courseImage: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800',
-        status: 'available',
-        isActive: true,
-        totalEnrolled: 245,
-        owner: 'instructor_id',
-      };
+      const response = await courseAPI.getCourseById(id);
+      const data = response.data.data;
       
-      setCourse(mockCourse);
+      setCourse(data.course);
+      setEnrollmentStatus(data.enrollmentStatus);
       setLoading(false);
     } catch (error) {
-      toast.error('Failed to load course');
+      console.error('Error fetching course:', error);
+      toast.error(error.response?.data?.message || 'Failed to load course');
       setLoading(false);
     }
   };
@@ -141,7 +134,7 @@ const CourseDetail = () => {
               <div className="flex flex-wrap gap-4 text-sm">
                 <div className="flex items-center text-gray-600">
                   <FaUsers className="mr-2 text-primary-500" />
-                  <span>{course.totalEnrolled} students enrolled</span>
+                  <span>{course.totalEnrolled || 0} students enrolled</span>
                 </div>
                 <div className="flex items-center text-gray-600">
                   <FaStar className="mr-2 text-yellow-400" />
@@ -153,6 +146,15 @@ const CourseDetail = () => {
                 </div>
               </div>
 
+              {/* Instructor Info */}
+              {course.owner && (
+                <div className="pt-2 border-t">
+                  <p className="text-sm text-gray-600">
+                    Instructor: <span className="font-semibold text-gray-900">{course.owner.FullName}</span>
+                  </p>
+                </div>
+              )}
+
               {/* Price */}
               <div className="pt-4 border-t">
                 <div className="flex items-center justify-between mb-4">
@@ -162,20 +164,56 @@ const CourseDetail = () => {
                   </div>
                   <span
                     className={`px-4 py-2 rounded-full font-semibold ${
-                      course.status === 'available'
+                      course.isActive
                         ? 'bg-green-100 text-green-700'
                         : 'bg-yellow-100 text-yellow-700'
                     }`}
                   >
-                    {course.status === 'available' ? 'Available' : 'Pending'}
+                    {course.isActive ? 'Available' : 'Pending'}
                   </span>
                 </div>
 
-                {user?.Role === 'learner' && course.status === 'available' && (
-                  <button onClick={handleEnroll} className="w-full btn-primary">
-                    <FaCheckCircle className="inline mr-2" />
-                    Enroll Now
-                  </button>
+                {/* Enrollment Status and Actions */}
+                {user?.Role === 'learner' && course.isActive && (
+                  <>
+                    {enrollmentStatus?.isEnrolled ? (
+                      <div className="space-y-3">
+                        {enrollmentStatus.paymentStatus === 'pending' && (
+                          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                            <p className="text-yellow-800 font-semibold">
+                              ⏳ Enrollment Pending
+                            </p>
+                            <p className="text-yellow-600 text-sm mt-1">
+                              Waiting for admin approval to access course materials
+                            </p>
+                          </div>
+                        )}
+                        {enrollmentStatus.paymentStatus === 'paid' && (
+                          <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                            <p className="text-green-800 font-semibold flex items-center">
+                              <FaCheckCircle className="mr-2" />
+                              ✓ Enrolled - Access Granted
+                            </p>
+                            <p className="text-green-600 text-sm mt-1">
+                              Progress: {enrollmentStatus.progress}%
+                            </p>
+                            <button 
+                              onClick={() => navigate(`/course/${id}/learn`)}
+                              className="mt-3 w-full btn-primary"
+                            >
+                              <FaBook className="inline mr-2" />
+                              Continue Learning
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button onClick={handleEnroll} className="w-full btn-primary">
+                        <FaCheckCircle className="inline mr-2" />
+                        Enroll Now
+                      </button>
+                    )}
+                  </>
                 )}
 
                 {user?.Role !== 'learner' && (
@@ -192,11 +230,31 @@ const CourseDetail = () => {
         </div>
 
         {/* Course Content Overview */}
-        <div className="card">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            What you'll learn
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {enrollmentStatus?.paymentStatus === 'paid' ? (
+          <div className="card">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Course Materials
+            </h2>
+            <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg text-center">
+              <FaBook className="text-5xl text-blue-500 mx-auto mb-4" />
+              <p className="text-gray-700 mb-4">
+                You have access to this course!
+              </p>
+              <button 
+                onClick={() => navigate(`/course/${id}/learn`)}
+                className="btn-primary"
+              >
+                <FaBook className="inline mr-2" />
+                Start Learning
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="card">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              What you'll learn
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
               'Build real-world projects',
               'Master modern technologies',
@@ -212,6 +270,7 @@ const CourseDetail = () => {
             ))}
           </div>
         </div>
+        )}
       </div>
 
       {/* Enrollment Modal */}

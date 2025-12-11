@@ -83,7 +83,10 @@ export const courseAPI = {
   addCourse: (formData) => api.post('/course/addcourse', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
-  getAllCourses: () => api.get('/course/getAllCourses'),
+  getAllCourses: () => api.get('/course/allCourses'),
+  getAvailableCourses: () => api.get('/course/availableCourses'),
+  getPendingCourses: () => api.get('/course/pendingCourses'),
+  getEnrolledCourses: () => api.get('/course/enrolledCourses'),
   getCourseById: (id) => api.get(`/course/${id}`),
   enrollCourse: (data) => api.post('/course/courseEnroll', data),
 };
@@ -104,6 +107,7 @@ export const adminAPI = {
   approveEnrollment: (data) => api.post('/course/approvedEnroll', data),
   approveCourse: (data) => api.post('/course/approvedCourse', data),
   issueCertificate: (data) => api.post('/course/issueCertificate', data),
+  getPendingEnrollments: () => api.get('/course/pendingEnrollments'),
 };
 
 // Progress API

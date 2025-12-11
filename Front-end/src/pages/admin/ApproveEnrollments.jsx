@@ -1,48 +1,62 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import { adminAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { FaCheckCircle, FaMoneyBillWave } from 'react-icons/fa';
+import { FaCheckCircle, FaMoneyBillWave, FaSpinner, FaUser, FaBook } from 'react-icons/fa';
 
 const ApproveEnrollments = () => {
   const [enrollments, setEnrollments] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [approving, setApproving] = useState(false);
 
-  // Mock data - in production, fetch from backend
-  const mockEnrollments = [
-    {
-      _id: '1',
-      courseID: 'course1',
-      courseTitle: 'Web Development Bootcamp',
-      learnerID: 'learner1',
-      learnerName: 'John Doe',
-      price: 5000,
-      transactionID: 'txn123',
-      paymentStatus: 'pending',
-    },
-  ];
+  useEffect(() => {
+    fetchPendingEnrollments();
+  }, []);
 
-  const handleApprove = async (enrollment) => {
-    if (!window.confirm(`Approve enrollment for ${enrollment.learnerName}?`)) {
-      return;
-    }
-
-    setLoading(true);
+  const fetchPendingEnrollments = async () => {
     try {
-      await adminAPI.approveEnrollment({
-        courseID: enrollment.courseID,
-        learnerID: enrollment.learnerID,
-        transactionID: enrollment.transactionID,
-      });
-      toast.success('Enrollment approved successfully!');
-      // Remove from list
-      setEnrollments(enrollments.filter((e) => e._id !== enrollment._id));
+      const response = await adminAPI.getPendingEnrollments();
+      setEnrollments(response.data.data || []);
+      setLoading(false);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to approve enrollment');
-    } finally {
+      console.error('Error fetching pending enrollments:', error);
+      toast.error('Failed to load pending enrollments');
       setLoading(false);
     }
   };
+
+  const handleApprove = async (enrollment) => {
+    const learnerName = enrollment.learnerID?.FullName || 'this student';
+    if (!window.confirm(`Approve enrollment for ${learnerName}?`)) {
+      return;
+    }
+
+    setApproving(true);
+    try {
+      await adminAPI.approveEnrollment({
+        courseID: enrollment.courseID._id,
+        learnerID: enrollment.learnerID._id,
+        transactionID: enrollment.transactionID,
+      });
+      toast.success('Enrollment approved successfully!');
+      // Refresh the list
+      fetchPendingEnrollments();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to approve enrollment');
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <FaSpinner className="animate-spin text-5xl text-primary-500" />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -51,28 +65,58 @@ const ApproveEnrollments = () => {
           Approve Enrollments
         </h1>
 
-        {mockEnrollments.length > 0 ? (
+        {enrollments.length > 0 ? (
           <div className="space-y-4">
-            {mockEnrollments.map((enrollment) => (
+            {enrollments.map((enrollment) => (
               <div key={enrollment._id} className="card">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">
-                      {enrollment.courseTitle}
-                    </h3>
-                    <p className="text-gray-600">Student: {enrollment.learnerName}</p>
-                    <p className="text-gray-600 flex items-center mt-2">
-                      <FaMoneyBillWave className="mr-2 text-green-500" />
-                      Amount: ৳{enrollment.price}
-                    </p>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-start gap-4">
+                      {enrollment.courseID?.courseImage && (
+                        <img 
+                          src={enrollment.courseID.courseImage} 
+                          alt={enrollment.courseID.title}
+                          className="w-20 h-20 object-cover rounded-lg"
+                        />
+                      )}
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center">
+                          <FaBook className="mr-2 text-primary-500" />
+                          {enrollment.courseID?.title || 'Unknown Course'}
+                        </h3>
+                        <p className="text-gray-600 flex items-center mb-2">
+                          <FaUser className="mr-2 text-secondary-500" />
+                          Student: {enrollment.learnerID?.FullName || 'Unknown'} 
+                          <span className="text-sm text-gray-500 ml-2">
+                            ({enrollment.learnerID?.Email || 'N/A'})
+                          </span>
+                        </p>
+                        <p className="text-gray-600 flex items-center">
+                          <FaMoneyBillWave className="mr-2 text-green-500" />
+                          Amount: <span className="font-bold ml-1">৳{enrollment.courseID?.price || 0}</span>
+                        </p>
+                        <p className="text-xs text-gray-400 mt-2">
+                          Enrolled: {new Date(enrollment.enrollAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                   <button
                     onClick={() => handleApprove(enrollment)}
-                    disabled={loading}
-                    className="btn-primary disabled:opacity-50"
+                    disabled={approving}
+                    className="btn-primary disabled:opacity-50 whitespace-nowrap"
                   >
-                    <FaCheckCircle className="inline mr-2" />
-                    Approve
+                    {approving ? (
+                      <>
+                        <FaSpinner className="inline mr-2 animate-spin" />
+                        Approving...
+                      </>
+                    ) : (
+                      <>
+                        <FaCheckCircle className="inline mr-2" />
+                        Approve
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -80,7 +124,9 @@ const ApproveEnrollments = () => {
           </div>
         ) : (
           <div className="card text-center py-12">
+            <FaCheckCircle className="text-6xl text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500 text-xl">No pending enrollments</p>
+            <p className="text-gray-400 mt-2">All enrollments have been processed</p>
           </div>
         )}
       </div>

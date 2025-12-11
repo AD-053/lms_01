@@ -1,14 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
-import { adminAPI } from '../../services/api';
+import { adminAPI, courseAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { FaCheckCircle, FaMoneyBillWave } from 'react-icons/fa';
+import { FaCheckCircle, FaMoneyBillWave, FaSpinner } from 'react-icons/fa';
 
 const ApproveCourses = () => {
   const [loading, setLoading] = useState(false);
+  const [courses, setCourses] = useState([]);
+  const [fetchLoading, setFetchLoading] = useState(true);
 
-  // Mock pending courses
-  const mockCourses = [];
+  useEffect(() => {
+    fetchPendingCourses();
+  }, []);
+
+  const fetchPendingCourses = async () => {
+    try {
+      const response = await courseAPI.getPendingCourses();
+      setCourses(response.data.data || []);
+      setFetchLoading(false);
+    } catch (error) {
+      console.error('Error fetching pending courses:', error);
+      toast.error('Failed to load pending courses');
+      setFetchLoading(false);
+    }
+  };
 
   const handleApprove = async (course) => {
     const payment = prompt('Enter course launch payment amount:');
@@ -24,12 +39,24 @@ const ApproveCourses = () => {
         courseLanchPayment: parseFloat(payment),
       });
       toast.success('Course approved successfully!');
+      // Refresh the list
+      fetchPendingCourses();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to approve course');
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetchLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <FaSpinner className="animate-spin text-5xl text-primary-500" />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -38,9 +65,9 @@ const ApproveCourses = () => {
           Approve Courses
         </h1>
 
-        {mockCourses.length > 0 ? (
+        {courses.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {mockCourses.map((course) => (
+            {courses.map((course) => (
               <div key={course._id} className="card">
                 <img
                   src={course.courseImage}
@@ -51,15 +78,22 @@ const ApproveCourses = () => {
                   {course.title}
                 </h3>
                 <p className="text-gray-600 mb-4">{course.description}</p>
-                <p className="text-primary-600 font-bold text-xl mb-4">
+                <p className="text-primary-600 font-bold text-xl mb-2">
                   ৳{course.price}
+                </p>
+                <p className="text-gray-500 text-sm mb-4">
+                  Instructor: {course.owner?.FullName || 'Unknown'}
                 </p>
                 <button
                   onClick={() => handleApprove(course)}
                   disabled={loading}
                   className="w-full btn-primary disabled:opacity-50"
                 >
-                  <FaCheckCircle className="inline mr-2" />
+                  {loading ? (
+                    <FaSpinner className="inline mr-2 animate-spin" />
+                  ) : (
+                    <FaCheckCircle className="inline mr-2" />
+                  )}
                   Approve & Pay Instructor
                 </button>
               </div>

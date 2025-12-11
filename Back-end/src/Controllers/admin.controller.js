@@ -197,9 +197,35 @@ const issueCertificate = AsynHandler(async (req, res) => {
   );
 });
 
+const getPendingEnrollments = AsynHandler(async (req, res) => {
+  const adminID = req.user?._id;
+
+  const admin = await User.findById(adminID);
+  if (!admin || admin.Role !== "admin") {
+    throw new ApiError(403, "Only admin can view pending enrollments");
+  }
+
+  // Find all enrollments with pending payment status
+  const pendingEnrollments = await Enroll.find({ paymentStatus: "pending" })
+    .populate({
+      path: 'courseID',
+      select: 'title description price courseImage'
+    })
+    .populate({
+      path: 'learnerID',
+      select: 'FullName Email ProfileImage UserName'
+    })
+    .sort({ enrollAt: -1 });
+
+  return res.status(200).json(
+    new ApiResponse(200, pendingEnrollments, "Pending enrollments fetched successfully")
+  );
+});
+
 
 export{
     approvedEnroll,
     approvedCourse,
-    issueCertificate
+    issueCertificate,
+    getPendingEnrollments
 }

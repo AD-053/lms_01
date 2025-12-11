@@ -93,12 +93,12 @@ const courseEnroll=AsynHandler(async(req,res)=>{
 
   
       if(!adminID){
-        throw new ApiError("adminID not valid")
+        throw new ApiError(401, "adminID not valid")
       }
 
       const adminid=await User.findById(adminID);
       if(!adminid || adminid.Role!=="admin"){
-         throw new ApiError("admin are required ");
+         throw new ApiError(401, "admin are required ");
       }
 
       const course=await Course.findById(courseID);
@@ -151,8 +151,126 @@ const courseEnroll=AsynHandler(async(req,res)=>{
 
 })
 
+const pendingCourseList = AsynHandler(async (req, res) => {
+    // Get all courses that are pending approval (isActive: false)
+    const pendingCourses = await Course.find({ isActive: false })
+        .populate('owner', 'FullName Email ProfileImage')
+        .sort({ createdAt: -1 });
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, pendingCourses, "Pending courses fetched successfully")
+        );
+});
+
+const allCourseList = AsynHandler(async (req, res) => {
+    // Get all courses (both active and inactive)
+    const allCourses = await Course.find()
+        .populate('owner', 'FullName Email ProfileImage')
+        .sort({ createdAt: -1 });
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, allCourses, "All courses fetched successfully")
+        );
+});
+
+const enrolledCourseList = AsynHandler(async (req, res) => {
+    // Get all courses the current user is enrolled in
+    const userID = req.user?._id;
+
+    if (!userID) {
+        throw new ApiError(401, "User not authenticated");
+    }
+
+    // Find all enrollments for this user where payment is approved
+    const enrollments = await Enroll.find({ 
+        learnerID: userID,
+        paymentStatus: "paid" 
+    }).populate({
+        path: 'courseID',
+        populate: {
+            path: 'owner',
+            select: 'FullName Email ProfileImage'
+        }
+    }).sort({ enrollAt: -1 });
+
+    // Extract course details from enrollments
+    const enrolledCourses = enrollments.map(enrollment => ({
+        ...enrollment.courseID._doc,
+        enrollmentDate: enrollment.enrollAt,
+        enrollmentID: enrollment._id
+    }));
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, enrolledCourses, "Enrolled courses fetched successfully")
+        );
+});
+
+const availabeCourseList = AsynHandler(async (req, res) => {
+    // Get all active/approved courses
+    const availableCourses = await Course.find({ isActive: true })
+        .populate('owner', 'FullName Email ProfileImage')
+        .sort({ createdAt: -1 });
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, availableCourses, "Available courses fetched successfully")
+        );
+});
+
+const getCourseById = AsynHandler(async (req, res) => {
+    const { id } = req.params;
+    const userID = req.user?._id;
+
+    if (!id) {
+        throw new ApiError(400, "Course ID is required");
+    }
+
+    const course = await Course.findById(id)
+        .populate('owner', 'FullName Email ProfileImage');
+
+    if (!course) {
+        throw new ApiError(404, "Course not found");
+    }
+
+    // Check if the current user is enrolled in this course
+    let enrollmentStatus = null;
+    if (userID) {
+        const enrollment = await Enroll.findOne({ 
+            courseID: id, 
+            learnerID: userID 
+        });
+        
+        if (enrollment) {
+            enrollmentStatus = {
+                isEnrolled: true,
+                paymentStatus: enrollment.paymentStatus,
+                status: enrollment.status,
+                progress: enrollment.progress,
+                enrolledAt: enrollment.enrollAt
+            };
+        }
+    }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, { course, enrollmentStatus }, "Course fetched successfully")
+        );
+});
+
 export{
     addCourse,
-    courseEnroll
-
+    courseEnroll,
+    pendingCourseList,
+    allCourseList,
+    enrolledCourseList,
+    availabeCourseList,
+    getCourseById
 }
