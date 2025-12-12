@@ -118,6 +118,17 @@ export const adminAPI = {
 // Progress API
 export const progressAPI = {
   updateProgress: (data) => api.post('/course/updateProgress', data),
+  submitExam: (data) => api.post('/course/submitExam', data),
+  getExamResult: (materialID) => api.get(`/course/examResult/${materialID}`),
+  getCourseExamResults: (courseID) => api.get(`/course/courseExamResults/${courseID}`),
+};
+
+// Certificate API
+export const certificateAPI = {
+  checkEligibility: (courseID) => api.get(`/course/certificateEligibility/${courseID}`),
+  generateCertificate: (data) => api.post('/course/generateCertificate', data),
+  getCertificate: (certificateID) => api.get(`/course/certificate/${certificateID}`),
+  getMyCertificates: () => api.get('/course/myCertificates'),
 };
 
 export default api;

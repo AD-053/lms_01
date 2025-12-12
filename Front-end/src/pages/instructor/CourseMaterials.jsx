@@ -225,7 +225,7 @@ const CourseMaterials = () => {
           .map(q => ({
             question: q.question,
             options: q.options,
-            answer: q.correctAnswer
+            answer: q.options[q.correctAnswer] // Save the actual option text, not the index
           }));
         submitData.append('mcq', JSON.stringify(validQuestions));
         submitData.append('mcqDuration', formData.mcqDuration || 5);
@@ -268,11 +268,15 @@ const CourseMaterials = () => {
     }));
     
     if (material.questions && material.questions.length > 0) {
-      mcqData = material.questions.map(q => ({
-        question: q.question || '',
-        options: q.options || ['', '', '', ''],
-        correctAnswer: q.answer || 0
-      }));
+      mcqData = material.questions.map(q => {
+        // Find the index of the correct answer in options
+        const correctAnswerIndex = q.options?.indexOf(q.answer) || 0;
+        return {
+          question: q.question || '',
+          options: q.options || ['', '', '', ''],
+          correctAnswer: correctAnswerIndex >= 0 ? correctAnswerIndex : 0
+        };
+      });
       
       // Ensure at least 5 question slots
       while (mcqData.length < 5) {

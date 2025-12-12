@@ -5,7 +5,7 @@ import { jwtVerification } from "../Middleware/Authentication.Middleware.js";
 import { addCourse, courseEnroll, pendingCourseList, allCourseList, enrolledCourseList, availabeCourseList, getCourseById, getInstructorCourses, getInstructorPendingEnrollments, rateCourse, getCourseRating } from "../Controllers/Course.controller.js";
 import { addMaterial, getAllmaterialList, updateMaterial, deleteMaterial } from "../Controllers/material.controller.js";
 import { approvedCourse, approvedEnroll, issueCertificate, getPendingEnrollments } from "../Controllers/admin.controller.js";
-import { updateProgress } from "../Controllers/progress.controller.js";
+import { updateProgress, submitExamResult, getExamResult, getCourseExamResults, checkCertificateEligibility, generateCertificate, getCertificate, getMyCertificates } from "../Controllers/progress.controller.js";
 const router=Router();
 
 
@@ -60,7 +60,6 @@ router.route("/enrolledCourses").get(jwtVerification, enrolledCourseList);
 router.route("/availableCourses").get(jwtVerification, availabeCourseList);
 router.route("/instructorCourses").get(jwtVerification, getInstructorCourses);
 router.route("/instructorPendingEnrollments").get(jwtVerification, getInstructorPendingEnrollments);
-router.route("/:id").get(jwtVerification, getCourseById);
 
 router.route("/updateMaterial").post(jwtVerification,
      upload.fields([
@@ -102,5 +101,19 @@ router.route("/material/:materialId").delete(jwtVerification, deleteMaterial);
 
 router.route("/rateCourse").post(jwtVerification, rateCourse);
 router.route("/rating/:courseID").get(jwtVerification, getCourseRating);
+
+// Exam routes
+router.route("/submitExam").post(jwtVerification, submitExamResult);
+router.route("/examResult/:materialID").get(jwtVerification, getExamResult);
+router.route("/courseExamResults/:courseID").get(jwtVerification, getCourseExamResults);
+
+// Certificate routes
+router.route("/certificateEligibility/:courseID").get(jwtVerification, checkCertificateEligibility);
+router.route("/generateCertificate").post(jwtVerification, generateCertificate);
+router.route("/certificate/:certificateID").get(jwtVerification, getCertificate);
+router.route("/myCertificates").get(jwtVerification, getMyCertificates);
+
+// Course by ID route - MUST be last to avoid catching other routes
+router.route("/:id").get(jwtVerification, getCourseById);
 
 export default router

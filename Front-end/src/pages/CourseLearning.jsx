@@ -38,6 +38,8 @@ const CourseLearning = () => {
   const [examStarted, setExamStarted] = useState({});
   const [timeRemaining, setTimeRemaining] = useState({});
   const [timerIntervals, setTimerIntervals] = useState({});
+  const [examResults, setExamResults] = useState({}); // Store previously taken exam results
+  const [submittingExam, setSubmittingExam] = useState(false);
 
   useEffect(() => {
     fetchCourseAndMaterials();
@@ -111,7 +113,25 @@ const CourseLearning = () => {
       }
       
       setCourse(courseData);
-      setMaterials(materialsRes.data.data || []);
+      const materialsData = materialsRes.data.data || [];
+      setMaterials(materialsData);
+      
+      // Fetch exam results for MCQ materials
+      const mcqMaterials = materialsData.filter(m => m.materialType === 'mcq');
+      const resultPromises = mcqMaterials.map(material => 
+        progressAPI.getExamResult(material._id).catch(() => ({ data: { data: null } }))
+      );
+      
+      const results = await Promise.all(resultPromises);
+      const examResultsMap = {};
+      
+      results.forEach((res, index) => {
+        if (res.data.data) {
+          examResultsMap[mcqMaterials[index]._id] = res.data.data;
+        }
+      });
+      
+      setExamResults(examResultsMap);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching course:', error);
@@ -127,44 +147,82 @@ const CourseLearning = () => {
     });
   };
 
-  const checkMcqAnswers = (materialId, material) => {
+  const checkMcqAnswers = async (materialId, material) => {
+    // Prevent submission if already taken
+    if (examResults[materialId]) {
+      toast.error('You have already taken this exam!');
+      return;
+    }
+
+    if (submittingExam) {
+      return; // Prevent double submission
+    }
+
     // Stop the timer
     if (timerIntervals[materialId]) {
       clearInterval(timerIntervals[materialId]);
     }
     
-    const results = {};
-    let correctCount = 0;
-    let answeredCount = 0;
+    setSubmittingExam(true);
     
-    material.questions.forEach((question, qIndex) => {
-      const userAnswer = mcqAnswers[`${materialId}-${qIndex}`];
-      const correctAnswer = parseInt(question.answer); // Convert string to number
+    try {
+      // Prepare answers array
+      const answers = material.questions.map((question, qIndex) => ({
+        questionIndex: qIndex,
+        selectedAnswer: mcqAnswers[`${materialId}-${qIndex}`] !== undefined 
+          ? material.questions[qIndex].options[mcqAnswers[`${materialId}-${qIndex}`]]
+          : ''
+      }));
+
+      // Calculate time taken
+      const duration = material.mcqDuration || 5;
+      const totalSeconds = duration * 60;
+      const timeTaken = totalSeconds - (timeRemaining[materialId] || 0);
+
+      // Submit exam to backend
+      const response = await progressAPI.submitExam({
+        courseID: id,
+        materialID: materialId,
+        answers,
+        timeTaken
+      });
+
+      const examResult = response.data.data;
       
-      // Check if question was answered
-      const isAnswered = userAnswer !== undefined;
-      const isCorrect = isAnswered && userAnswer === correctAnswer;
+      // Update local exam results
+      setExamResults({
+        ...examResults,
+        [materialId]: examResult
+      });
+
+      // Show success message
+      toast.success(`Exam submitted! Score: ${examResult.correctAnswers}/${examResult.totalQuestions} (${examResult.score.toFixed(1)}%)`);
       
-      if (isAnswered) answeredCount++;
-      if (isCorrect) correctCount++;
+      // Refresh course materials to update progress
+      fetchCourseAndMaterials();
       
-      results[qIndex] = {
-        userAnswer,
-        correctAnswer,
-        isCorrect,
-        isAnswered
-      };
-    });
-    
-    setShowResults({
-      ...showResults,
-      [materialId]: {
-        questions: results,
-        score: correctCount,
-        total: material.questions.length,
-        answered: answeredCount
+    } catch (error) {
+      console.error('Error submitting exam:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to submit exam';
+      toast.error(errorMessage);
+      
+      // If already taken, fetch the result
+      if (error.response?.status === 400 && errorMessage.includes('already taken')) {
+        try {
+          const resultRes = await progressAPI.getExamResult(materialId);
+          if (resultRes.data.data) {
+            setExamResults({
+              ...examResults,
+              [materialId]: resultRes.data.data
+            });
+          }
+        } catch (fetchError) {
+          console.error('Error fetching exam result:', fetchError);
+        }
       }
-    });
+    } finally {
+      setSubmittingExam(false);
+    }
   };
 
   const handleNextMaterial = () => {
@@ -263,13 +321,109 @@ const CourseLearning = () => {
           return <p className="text-gray-500">No questions available</p>;
         }
         
-        const result = showResults[material._id];
+        const existingResult = examResults[material._id];
         const isExamStarted = examStarted[material._id];
         const timeLeft = timeRemaining[material._id];
         const duration = material.mcqDuration || material.questions.length;
         
+        // Show exam result if already taken
+        if (existingResult) {
+          return (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-lg border-2 border-green-300">
+                <div className="flex items-center justify-center mb-4">
+                  <FaCheckCircle className="text-6xl text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-center text-gray-900 mb-4">
+                  Exam Completed
+                </h3>
+                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                  <div className="bg-white p-4 rounded-lg text-center">
+                    <p className="text-gray-600 text-sm mb-1">Score</p>
+                    <p className="text-3xl font-bold text-green-600">
+                      {existingResult.score.toFixed(1)}%
+                    </p>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg text-center">
+                    <p className="text-gray-600 text-sm mb-1">Correct Answers</p>
+                    <p className="text-3xl font-bold text-blue-600">
+                      {existingResult.correctAnswers}/{existingResult.totalQuestions}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-center text-gray-600 mt-4">
+                  Completed on: {new Date(existingResult.completedAt).toLocaleString()}
+                </p>
+                <div className="bg-yellow-50 border border-yellow-300 p-4 rounded-lg mt-6">
+                  <p className="text-yellow-800 text-center font-semibold">
+                    ℹ️ You can only take this exam once. Your result has been saved.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Show questions with answers for review */}
+              <div className="bg-white p-6 rounded-lg border border-gray-200">
+                <h4 className="text-xl font-bold text-gray-900 mb-4">Review Your Answers</h4>
+                <div className="space-y-6">
+                  {material.questions.map((question, qIndex) => {
+                    const userAnswerObj = existingResult.answers.find(a => a.questionIndex === qIndex);
+                    const correctAnswer = question.answer;
+                    
+                    return (
+                      <div key={qIndex} className="border-b border-gray-200 pb-4 last:border-b-0">
+                        <div className="flex items-start gap-3 mb-3">
+                          <span className="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-bold">
+                            {qIndex + 1}
+                          </span>
+                          <h5 className="text-lg font-semibold text-gray-900 flex-1">
+                            {question.question}
+                          </h5>
+                          {userAnswerObj?.isCorrect ? (
+                            <FaCheckCircle className="text-green-600 text-2xl" />
+                          ) : (
+                            <FaTimes className="text-red-600 text-2xl" />
+                          )}
+                        </div>
+                        
+                        <div className="ml-11 space-y-2">
+                          {question.options?.map((option, optIndex) => {
+                            const isCorrect = option === correctAnswer;
+                            const isUserAnswer = option === userAnswerObj?.selectedAnswer;
+                            
+                            let optionClass = 'bg-gray-50 border-gray-300';
+                            if (isCorrect) {
+                              optionClass = 'bg-green-100 border-green-500 font-semibold';
+                            } else if (isUserAnswer && !isCorrect) {
+                              optionClass = 'bg-red-100 border-red-500';
+                            }
+                            
+                            return (
+                              <div
+                                key={optIndex}
+                                className={`flex items-center p-3 border rounded-lg ${optionClass}`}
+                              >
+                                <span className="flex-1">{option}</span>
+                                {isCorrect && (
+                                  <span className="text-green-600 text-sm ml-2">✓ Correct Answer</span>
+                                )}
+                                {isUserAnswer && !isCorrect && (
+                                  <span className="text-red-600 text-sm ml-2">✗ Your Answer</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        }
+        
         // Show Start Exam button if exam hasn't started
-        if (!isExamStarted && !result) {
+        if (!isExamStarted) {
           return (
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-8 rounded-lg text-center">
               <FaQuestionCircle className="text-6xl text-blue-500 mx-auto mb-4" />
@@ -284,8 +438,9 @@ const CourseLearning = () => {
                 <p className="text-yellow-800 font-semibold">⚠️ Important Instructions:</p>
                 <ul className="text-left text-yellow-700 mt-2 space-y-1">
                   <li>• Once started, the timer will begin automatically</li>
-                  <li>• You must answer all questions before time runs out</li>
+                  <li>• You can only take this exam ONCE</li>
                   <li>• The exam will auto-submit when time expires</li>
+                  <li>• Your answers will be saved permanently</li>
                   <li>• Make sure you have a stable internet connection</li>
                 </ul>
               </div>
@@ -302,7 +457,7 @@ const CourseLearning = () => {
         return (
           <div className="space-y-6">
             {/* Timer Display - Sticky on right */}
-            {isExamStarted && !result && (
+            {isExamStarted && (
               <div className="fixed top-24 right-8 z-50">
                 <div className={`p-4 rounded-lg shadow-lg ${
                   timeLeft <= 60 ? 'bg-red-100 border-2 border-red-500 animate-pulse' : 'bg-white border-2 border-blue-500'
@@ -320,19 +475,7 @@ const CourseLearning = () => {
               </div>
             )}
             
-            {result && (
-              <div className="bg-blue-100 border border-blue-300 p-4 rounded-lg">
-                <p className="text-blue-900 font-bold text-lg">
-                  Score: {result.score} / {result.total} ({Math.round((result.score / result.total) * 100)}%)
-                </p>
-                <p className="text-blue-800 text-sm mt-1">
-                  Answered: {result.answered} / {result.total} questions
-                </p>
-              </div>
-            )}
-            
             {material.questions.map((question, qIndex) => {
-              const questionResult = result?.questions?.[qIndex];
               const userAnswer = mcqAnswers[`${material._id}-${qIndex}`];
               
               return (
@@ -348,23 +491,10 @@ const CourseLearning = () => {
                   
                   <div className="space-y-3">
                     {question.options?.map((option, optIndex) => {
-                      const isCorrectAnswer = questionResult?.correctAnswer === optIndex;
-                      const isUserAnswer = questionResult?.userAnswer === optIndex;
                       const isSelected = userAnswer === optIndex;
-                      
-                      let optionClass = 'bg-gray-50 border-gray-300 hover:bg-gray-100';
-                      
-                      if (questionResult) {
-                        if (isCorrectAnswer) {
-                          optionClass = 'bg-green-100 border-green-500';
-                        } else if (isUserAnswer && !isCorrectAnswer) {
-                          optionClass = 'bg-red-100 border-red-500';
-                        } else {
-                          optionClass = 'bg-gray-50 border-gray-300';
-                        }
-                      } else if (isSelected) {
-                        optionClass = 'bg-blue-100 border-blue-500';
-                      }
+                      const optionClass = isSelected 
+                        ? 'bg-blue-100 border-blue-500' 
+                        : 'bg-gray-50 border-gray-300 hover:bg-gray-100';
                       
                       return (
                         <label
@@ -377,75 +507,24 @@ const CourseLearning = () => {
                             value={optIndex}
                             checked={isSelected}
                             onChange={() => handleMcqAnswer(material._id, qIndex, optIndex)}
-                            disabled={!!questionResult}
                             className="mr-3"
                           />
                           <span className="flex-1">{option}</span>
-                          {questionResult && isCorrectAnswer && (
-                            <FaCheckCircle className="text-green-600 ml-2 text-xl" />
-                          )}
-                          {questionResult && isUserAnswer && !isCorrectAnswer && (
-                            <FaTimes className="text-red-600 ml-2 text-xl" />
-                          )}
                         </label>
                       );
                     })}
                   </div>
-                  
-                  {questionResult && (
-                    <div className={`mt-3 p-3 rounded-lg ${
-                      questionResult.isCorrect 
-                        ? 'bg-green-50 text-green-800' 
-                        : questionResult.isAnswered 
-                        ? 'bg-red-50 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {questionResult.isCorrect ? (
-                        <p className="text-sm font-semibold">✓ Correct!</p>
-                      ) : questionResult.isAnswered ? (
-                        <p className="text-sm font-semibold">✗ Incorrect - Correct answer highlighted above</p>
-                      ) : (
-                        <p className="text-sm font-semibold">⊘ Not Answered - Correct answer highlighted above</p>
-                      )}
-                    </div>
-                  )}
                 </div>
               );
             })}
             
-            {!result ? (
-              <button
-                onClick={() => checkMcqAnswers(material._id, material)}
-                className="btn-primary w-full"
-              >
-                Submit Answers
-              </button>
-            ) : (
-              <div className={`p-6 rounded-lg text-center ${
-                result.score === result.total 
-                  ? 'bg-green-100 text-green-800' 
-                  : result.score >= result.total / 2 
-                  ? 'bg-yellow-100 text-yellow-800' 
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {result.score === result.total ? (
-                  <>
-                    <p className="font-bold text-xl">🎉 Perfect Score! You got all answers correct!</p>
-                    <p className="text-sm mt-2">Answered: {result.answered}/{result.total}</p>
-                  </>
-                ) : result.score >= result.total / 2 ? (
-                  <>
-                    <p className="font-bold text-xl">👍 Good Job! You passed with {result.score} out of {result.total} correct.</p>
-                    <p className="text-sm mt-2">Answered: {result.answered}/{result.total}</p>
-                  </>
-                ) : (
-                  <>
-                    <p className="font-bold text-xl">📚 Keep Learning! You got {result.score} out of {result.total} correct.</p>
-                    <p className="text-sm mt-2">Answered: {result.answered}/{result.total}</p>
-                  </>
-                )}
-              </div>
-            )}
+            <button
+              onClick={() => checkMcqAnswers(material._id, material)}
+              disabled={submittingExam}
+              className="btn-primary w-full disabled:opacity-50"
+            >
+              {submittingExam ? 'Submitting...' : 'Submit Answers'}
+            </button>
           </div>
         );
 

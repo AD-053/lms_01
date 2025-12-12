@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
-import { courseAPI } from '../services/api';
+import { courseAPI, certificateAPI } from '../services/api';
 import toast from 'react-hot-toast';
 import {
   FaBook,
@@ -12,6 +12,7 @@ import {
   FaStar,
   FaCheckCircle,
   FaLock,
+  FaCertificate,
 } from 'react-icons/fa';
 
 const CourseDetail = () => {
@@ -28,6 +29,8 @@ const CourseDetail = () => {
   const [hoverRating, setHoverRating] = useState(0);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [review, setReview] = useState('');
+  const [certificateEligibility, setCertificateEligibility] = useState(null);
+  const [generatingCertificate, setGeneratingCertificate] = useState(false);
 
   const ADMIN_ID = '693a58d93cb728332626f9a2'; // From constant.js in backend
 
@@ -53,6 +56,14 @@ const CourseDetail = () => {
           }
         } catch (err) {
           // No rating yet, that's fine
+        }
+
+        // Check certificate eligibility
+        try {
+          const certRes = await certificateAPI.checkEligibility(id);
+          setCertificateEligibility(certRes.data.data);
+        } catch (err) {
+          console.error('Error checking certificate eligibility:', err);
         }
       }
       
@@ -124,6 +135,21 @@ const CourseDetail = () => {
       fetchCourse(); // Refresh to get updated average rating
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to submit rating');
+    }
+  };
+
+  const handleGenerateCertificate = async () => {
+    setGeneratingCertificate(true);
+    try {
+      const response = await certificateAPI.generateCertificate({ courseID: id });
+      const certificate = response.data.data;
+      toast.success('Certificate generated successfully!');
+      navigate(`/certificate/${certificate._id}`);
+    } catch (error) {
+      console.error('Error generating certificate:', error);
+      toast.error(error.response?.data?.message || 'Failed to generate certificate');
+    } finally {
+      setGeneratingCertificate(false);
     }
   };
 
@@ -262,6 +288,56 @@ const CourseDetail = () => {
                               <FaStar className="inline mr-2" />
                               Rate this Course
                             </button>
+
+                            {/* Certificate Section */}
+                            {certificateEligibility && (
+                              <div className="mt-4">
+                                {certificateEligibility.certificateIssued ? (
+                                  <button
+                                    onClick={() => navigate(`/certificate/${certificateEligibility.certificate._id}`)}
+                                    className="w-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-semibold py-3 rounded-lg hover:from-yellow-500 hover:to-yellow-700 transition-all shadow-lg"
+                                  >
+                                    <FaCertificate className="inline mr-2" />
+                                    View Certificate
+                                  </button>
+                                ) : certificateEligibility.eligible ? (
+                                  <button
+                                    onClick={handleGenerateCertificate}
+                                    disabled={generatingCertificate}
+                                    className="w-full bg-gradient-to-r from-green-400 to-green-600 text-white font-semibold py-3 rounded-lg hover:from-green-500 hover:to-green-700 transition-all shadow-lg disabled:opacity-50"
+                                  >
+                                    <FaCertificate className="inline mr-2" />
+                                    {generatingCertificate ? 'Generating...' : 'Generate Certificate'}
+                                  </button>
+                                ) : (
+                                  <div className="bg-yellow-50 border border-yellow-300 p-3 rounded-lg">
+                                    <p className="text-yellow-800 font-semibold text-sm mb-2">
+                                      📜 Certificate Requirements:
+                                    </p>
+                                    <ul className="text-yellow-700 text-xs space-y-1">
+                                      <li className="flex items-center">
+                                        {certificateEligibility.videoRequirementMet ? '✅' : '❌'}
+                                        <span className="ml-2">
+                                          Watch 80% of videos ({certificateEligibility.videoCompletionPercentage.toFixed(1)}% completed)
+                                        </span>
+                                      </li>
+                                      <li className="flex items-center">
+                                        {certificateEligibility.allMcqsCompleted ? '✅' : '❌'}
+                                        <span className="ml-2">
+                                          Complete all MCQs ({certificateEligibility.completedMcqs}/{certificateEligibility.totalMcqs})
+                                        </span>
+                                      </li>
+                                      <li className="flex items-center">
+                                        {certificateEligibility.mcqRequirementMet ? '✅' : '❌'}
+                                        <span className="ml-2">
+                                          Score 60% average ({certificateEligibility.averageScore.toFixed(1)}%)
+                                        </span>
+                                      </li>
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

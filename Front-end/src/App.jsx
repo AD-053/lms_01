@@ -29,6 +29,7 @@ import IssueCertificates from './pages/admin/IssueCertificates';
 // Placeholder Pages
 import MyCourses from './pages/MyCourses';
 import Certificates from './pages/Certificates';
+import Certificate from './pages/Certificate';
 import Profile from './pages/Profile';
 import Unauthorized from './pages/Unauthorized';
 
@@ -114,6 +115,15 @@ function App() {
         element={
           <ProtectedRoute allowedRoles={['learner']}>
             <Certificates />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/certificate/:certificateID"
+        element={
+          <ProtectedRoute>
+            <Certificate />
           </ProtectedRoute>
         }
       />
