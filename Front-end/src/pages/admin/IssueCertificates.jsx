@@ -23,10 +23,24 @@ const IssueCertificates = () => {
     try {
       if (filter === 'pending') {
         const response = await certificateAPI.getPendingRequests();
+
+
+
+
+
+
+
         setPendingRequests(response.data.data || []);
       } else {
         const params = filter === 'all' ? {} : { status: filter };
         const response = await certificateAPI.getAllRequests(params);
+
+
+
+
+
+
+
         setAllRequests(response.data.data || []);
       }
     } catch (error) {
@@ -41,6 +55,13 @@ const IssueCertificates = () => {
     try {
       setProcessing({ ...processing, [certificateID]: true });
       await certificateAPI.approveCertificate(certificateID);
+
+
+
+
+
+
+
       toast.success('Certificate approved successfully');
       await fetchRequests();
     } catch (error) {
@@ -62,6 +83,13 @@ const IssueCertificates = () => {
     try {
       setProcessing({ ...processing, [selectedCertificate._id]: true });
       await certificateAPI.rejectCertificate(selectedCertificate._id, rejectionReason);
+
+
+
+
+
+
+
       toast.success('Certificate request rejected');
       setShowRejectModal(false);
       setRejectionReason('');

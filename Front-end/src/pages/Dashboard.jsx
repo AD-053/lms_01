@@ -90,6 +90,13 @@ const Dashboard = () => {
   const fetchInstructorStats = async () => {
     try {
       const coursesRes = await courseAPI.getInstructorCourses();
+
+
+
+
+
+
+
       const courses = coursesRes.data.data || [];
       const coursesCount = courses.length;
       

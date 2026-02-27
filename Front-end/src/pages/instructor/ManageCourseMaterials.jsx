@@ -57,6 +57,13 @@ const ManageCourseMaterials = () => {
   const fetchClasses = async () => {
     try {
       const response = await classAPI.getClassesByCourse(courseID);
+
+
+
+
+
+
+
       setClasses(response.data.data);
       setLoading(false);
     } catch (error) {
@@ -71,6 +78,13 @@ const ManageCourseMaterials = () => {
     
     try {
       await classAPI.addClass({
+
+
+
+
+
+
+
         courseID,
         ...classForm
       });
@@ -92,6 +106,13 @@ const ManageCourseMaterials = () => {
     
     try {
       await classAPI.deleteClass(classID);
+
+
+
+
+
+
+
       toast.success('Class deleted successfully!');
       fetchClasses();
     } catch (error) {
@@ -103,6 +124,13 @@ const ManageCourseMaterials = () => {
   const handleEnableFinalExam = async (classID) => {
     try {
       await classAPI.enableFinalExam(classID);
+
+
+
+
+
+
+
       toast.success('Final exam enabled successfully!');
       fetchClasses();
     } catch (error) {
@@ -142,6 +170,13 @@ const ManageCourseMaterials = () => {
     
     try {
       await materialAPI.uploadMaterial(formData);
+
+
+
+
+
+
+
       toast.success('Material added successfully!');
       setShowAddMaterial(false);
       setMaterialForm({

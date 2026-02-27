@@ -21,14 +21,35 @@ const Certificates = () => {
     try {
       // Fetch approved certificates
       const approvedRes = await certificateAPI.getMyCertificates('approved');
+
+
+
+
+
+
+
       setApprovedCertificates(approvedRes.data.data || []);
 
       // Fetch pending certificates
       const pendingRes = await certificateAPI.getMyCertificates('pending');
+
+
+
+
+
+
+
       setPendingCertificates(pendingRes.data.data || []);
 
       // Fetch enrolled courses to check eligibility
       const coursesRes = await courseAPI.getEnrolledCourses();
+
+
+
+
+
+
+
       const enrolledCourses = coursesRes.data.data || [];
 
       // Check eligibility for each course
@@ -36,6 +57,13 @@ const Certificates = () => {
       for (const course of enrolledCourses) {
         try {
           const eligibilityRes = await certificateAPI.checkEligibility(course._id);
+
+
+
+
+
+
+
           const eligibilityData = eligibilityRes.data.data;
           
           if (eligibilityData && eligibilityData.eligible) {
@@ -62,6 +90,13 @@ const Certificates = () => {
     try {
       setRequesting({ ...requesting, [courseID]: true });
       await certificateAPI.requestCertificate(courseID);
+
+
+
+
+
+
+
       toast.success('Certificate requested successfully! Please wait for admin approval.');
       // Refresh data
       await fetchData();

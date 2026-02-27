@@ -22,8 +22,22 @@ const MyCourses = () => {
       // Instructors see their created courses, learners see enrolled courses
       if (user?.Role === 'instructor' || user?.Role === 'admin') {
         response = await courseAPI.getInstructorCourses();
+
+
+
+
+
+
+
       } else {
         response = await courseAPI.getEnrolledCourses();
+
+
+
+
+
+
+
       }
       const coursesData = response.data.data || [];
       setCourses(coursesData);

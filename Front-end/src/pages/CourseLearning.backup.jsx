@@ -181,6 +181,13 @@ const CourseLearning = () => {
 
       // Submit exam to backend
       const response = await progressAPI.submitExam({
+
+
+
+
+
+
+
         courseID: id,
         materialID: materialId,
         answers,
@@ -210,6 +217,13 @@ const CourseLearning = () => {
       if (error.response?.status === 400 && errorMessage.includes('already taken')) {
         try {
           const resultRes = await progressAPI.getExamResult(materialId);
+
+
+
+
+
+
+
           if (resultRes.data.data) {
             setExamResults({
               ...examResults,

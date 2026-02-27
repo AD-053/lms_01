@@ -23,6 +23,13 @@ const Courses = () => {
   const fetchCourses = async () => {
     try {
       const response = await courseAPI.getAvailableCourses();
+
+
+
+
+
+
+
       const coursesData = response.data.data || [];
       
       setCourses(coursesData);

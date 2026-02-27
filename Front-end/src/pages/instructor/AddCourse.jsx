@@ -58,6 +58,13 @@ const AddCourse = () => {
 
     try {
       const response = await courseAPI.addCourse(data);
+
+
+
+
+
+
+
       toast.success('Course created successfully! Waiting for admin approval.');
       // Redirect based on user role
       if (user?.Role === 'admin') {

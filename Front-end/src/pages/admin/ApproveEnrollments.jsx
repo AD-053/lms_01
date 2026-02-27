@@ -18,6 +18,13 @@ const ApproveEnrollments = () => {
   const fetchPendingEnrollments = async () => {
     try {
       const response = await adminAPI.getPendingEnrollments();
+
+
+
+
+
+
+
       setEnrollments(response.data.data || []);
       setLoading(false);
     } catch (error) {
@@ -36,6 +43,13 @@ const ApproveEnrollments = () => {
     setApproving(true);
     try {
       await adminAPI.approveEnrollment({
+
+
+
+
+
+
+
         courseID: enrollment.courseID._id,
         learnerID: enrollment.learnerID._id,
         transactionID: enrollment.transactionID,
@@ -45,6 +59,13 @@ const ApproveEnrollments = () => {
       // Fetch updated user profile to reflect balance changes
       try {
         const userResponse = await authAPI.getUserProfile(user._id);
+
+
+
+
+
+
+
         updateUser(userResponse.data.data);
       } catch (error) {
         console.error('Failed to update user profile:', error);

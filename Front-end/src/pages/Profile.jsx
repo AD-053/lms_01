@@ -17,6 +17,13 @@ const Profile = () => {
   const fetchProfile = async () => {
     try {
       const response = await authAPI.getUserProfile(id);
+
+
+
+
+
+
+
       setProfile(response.data.data);
       setLoading(false);
     } catch (error) {

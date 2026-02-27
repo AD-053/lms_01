@@ -33,6 +33,13 @@ const BankSetup = () => {
   const fetchTransactions = async () => {
     try {
       const response = await bankAPI.getTransactions();
+
+
+
+
+
+
+
       setTransactions(response.data.data || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);
@@ -47,6 +54,13 @@ const BankSetup = () => {
 
     try {
       const response = await bankAPI.addBankAccount(accountData);
+
+
+
+
+
+
+
       updateUser(response.data.data);
       toast.success('Bank account added successfully!');
       setShowAddAccount(false);
@@ -70,6 +84,13 @@ const BankSetup = () => {
 
     try {
       const response = await bankAPI.addBalance(balanceData);
+
+
+
+
+
+
+
       updateUser(response.data.data);
       toast.success('Balance added successfully!');
       setShowAddBalance(false);

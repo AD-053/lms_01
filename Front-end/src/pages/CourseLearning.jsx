@@ -67,6 +67,13 @@ const CourseLearning = () => {
   const fetchCourseStructure = async () => {
     try {
       const response = await progressAPI.getCourseStructure(id);
+
+
+
+
+
+
+
       const data = response.data.data;
       
       setCourseStructure(data.structure);
@@ -170,6 +177,13 @@ const CourseLearning = () => {
       const timeTaken = totalSeconds - timeRemaining;
 
       await progressAPI.submitExam({
+
+
+
+
+
+
+
         courseID: id,
         materialID: selectedMaterial._id,
         answers,
@@ -200,6 +214,13 @@ const CourseLearning = () => {
     if (watchedSeconds % 5 === 0 && watchedSeconds > 0) {
       try {
         await progressAPI.updateProgress({
+
+
+
+
+
+
+
           courseID: id,
           classID: selectedClass._id,
           materialID: selectedMaterial._id,
@@ -223,6 +244,13 @@ const CourseLearning = () => {
     
     try {
       await progressAPI.updateProgress({
+
+
+
+
+
+
+
         courseID: id,
         classID: selectedClass._id,
         materialID: selectedMaterial._id

@@ -43,6 +43,13 @@ const ManageCourses = () => {
     setApproving(true);
     try {
       await adminAPI.approveEnrollment({
+
+
+
+
+
+
+
         courseID: enrollment.courseID._id,
         learnerID: enrollment.learnerID._id,
         transactionID: enrollment.transactionID,

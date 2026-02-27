@@ -41,6 +41,13 @@ const CourseDetail = () => {
   const fetchCourse = async () => {
     try {
       const response = await courseAPI.getCourseById(id);
+
+
+
+
+
+
+
       const data = response.data.data;
       
       setCourse(data.course);
@@ -50,6 +57,13 @@ const CourseDetail = () => {
       if (data.enrollmentStatus?.paymentStatus === 'paid' && user?.Role === 'learner') {
         try {
           const ratingRes = await courseAPI.getCourseRating(id);
+
+
+
+
+
+
+
           if (ratingRes.data.data) {
             setUserRating(ratingRes.data.data.rating);
             setReview(ratingRes.data.data.review || '');
@@ -61,6 +75,13 @@ const CourseDetail = () => {
         // Check certificate eligibility
         try {
           const certRes = await certificateAPI.checkEligibility(id);
+
+
+
+
+
+
+
           if (certRes.data.data) {
             setCertificateEligibility(certRes.data.data);
           }
@@ -100,6 +121,13 @@ const CourseDetail = () => {
 
     try {
       await courseAPI.enrollCourse({
+
+
+
+
+
+
+
         courseID: course._id,
         price: course.price,
         adminID: ADMIN_ID,
@@ -113,6 +141,13 @@ const CourseDetail = () => {
       // Fetch updated user profile to reflect the new balance
       try {
         const userResponse = await authAPI.getUserProfile(user._id);
+
+
+
+
+
+
+
         updateUser(userResponse.data.data);
       } catch (error) {
         console.error('Failed to update user profile:', error);
@@ -137,6 +172,13 @@ const CourseDetail = () => {
 
     try {
       await courseAPI.rateCourse({
+
+
+
+
+
+
+
         courseID: id,
         rating: userRating,
         review: review
@@ -153,6 +195,13 @@ const CourseDetail = () => {
     setGeneratingCertificate(true);
     try {
       await certificateAPI.requestCertificate(id);
+
+
+
+
+
+
+
       toast.success('Certificate requested successfully! Please wait for admin approval.');
       navigate('/certificates');
     } catch (error) {

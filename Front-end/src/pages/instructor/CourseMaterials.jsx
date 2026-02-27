@@ -70,10 +70,24 @@ const CourseMaterials = () => {
   const fetchCourseAndMaterials = async () => {
     try {
       const courseRes = await courseAPI.getCourseById(courseId);
+
+
+
+
+
+
+
       setCourse(courseRes.data.data.course);
       
       // Fetch materials for this course
       const materialsRes = await materialAPI.getMaterialsByCourse(courseId);
+
+
+
+
+
+
+
       const responseData = materialsRes.data.data;
       
       // Handle new structured format or old flat format
@@ -268,15 +282,36 @@ const CourseMaterials = () => {
 
       if (currentMaterial) {
         await materialAPI.updateMaterial(currentMaterial._id, submitData);
+
+
+
+
+
+
+
         toast.success('Material updated successfully!');
       } else {
         await materialAPI.uploadMaterial(submitData);
+
+
+
+
+
+
+
         toast.success('Material uploaded successfully!');
       }
       
       // Fetch updated user profile to reflect balance changes
       try {
         const userResponse = await authAPI.getUserProfile(user._id);
+
+
+
+
+
+
+
         updateUser(userResponse.data.data);
       } catch (error) {
         console.error('Failed to update user profile:', error);
@@ -342,6 +377,13 @@ const CourseMaterials = () => {
 
     try {
       await materialAPI.deleteMaterial(materialId);
+
+
+
+
+
+
+
       toast.success('Material deleted successfully!');
       fetchCourseAndMaterials();
     } catch (error) {

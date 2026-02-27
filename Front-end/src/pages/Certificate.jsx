@@ -22,6 +22,13 @@ const Certificate = () => {
   const fetchCertificate = async () => {
     try {
       const response = await certificateAPI.getCertificate(certificateID);
+
+
+
+
+
+
+
       setCertificate(response.data.data);
       setLoading(false);
     } catch (error) {
