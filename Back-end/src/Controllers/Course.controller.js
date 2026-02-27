@@ -141,15 +141,12 @@ const courseEnroll=AsynHandler(async(req,res)=>{
 
       await  user.save({validateBeforeSave:false});
       console.log("enrolled succesfully .. awaiting for admin approval");
-       
-
       
       return res
       .status(201)
       .json(
         new ApiResponse(201,enrolled,"enrolled succesfully .. awaiting for admin approval")
       )
-
 })
 
 const pendingCourseList = AsynHandler(async (req, res) => {
